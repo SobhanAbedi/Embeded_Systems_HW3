@@ -43,16 +43,16 @@ class TaskSetIterator:
 
 class TaskSet(object):
     def __init__(self, task_set_data):
-        self.parse_data_to_tasks(task_set_data)
-        self.build_job_releases(task_set_data)
         self.jobs = []
         self.tasks = {}
+        self.parse_data_to_tasks(task_set_data)
+        self.build_job_releases(task_set_data)
 
     def parse_data_to_tasks(self, task_set_data):
         task_set = {}
 
-        for taskData in task_set_data[TaskSetJsonKeys.KEY_TASKSET]:
-            task = Task(taskData)
+        for task_data in task_set_data[TaskSetJsonKeys.KEY_TASKSET]:
+            task = Task(task_data)
 
             if task.id in task_set:
                 print("Error: duplicate task ID: {0}".format(task.id))
@@ -226,9 +226,9 @@ if __name__ == "__main__":
         file_path = "taskset.json"
 
     with open(file_path) as json_data:
-        data = json.load(json_data)
+        task_set_data = json.load(json_data)
 
-    taskSet = TaskSet(data)
+    taskSet = TaskSet(task_set_data)
 
     taskSet.print_tasks()
     taskSet.print_jobs()
