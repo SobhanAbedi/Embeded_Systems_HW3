@@ -25,6 +25,12 @@ class TaskSetJsonKeys(object):
 
 class Task(object):
     def __init__(self, task_dict):
+        self.id = 0
+        self.period = 0
+        self.wcet = 0
+        self.relativeDeadline = 0
+        self.offset = 0
+        self.sections = []
         if task_dict is not None:
             self.id = int(task_dict[TaskSetJsonKeys.KEY_TASK_ID])
             self.period = float(task_dict[TaskSetJsonKeys.KEY_TASK_PERIOD])
@@ -33,13 +39,6 @@ class Task(object):
                 task_dict.get(TaskSetJsonKeys.KEY_TASK_DEADLINE, task_dict[TaskSetJsonKeys.KEY_TASK_PERIOD]))
             self.offset = float(task_dict.get(TaskSetJsonKeys.KEY_TASK_OFFSET, 0.0))
             self.sections = task_dict[TaskSetJsonKeys.KEY_TASK_SECTIONS]
-        else:
-            self.id = 0
-            self.period = 0
-            self.wcet = 0
-            self.relativeDeadline = 0
-            self.offset = 0
-            self.sections = []
 
         self.lastJobId = 0
         self.lastReleasedTime = 0.0
@@ -59,7 +58,7 @@ class Task(object):
             resources.pop(0)
         return resources
 
-    def spawn_job(self, release_time, resources) -> Job:
+    def spawn_job(self, release_time) -> Job:
         if self.lastReleasedTime > 0 and release_time < self.lastReleasedTime:
             print("INVALID: release time of job is not monotonic")
             return EMPTY_JOB
@@ -71,7 +70,7 @@ class Task(object):
         self.lastJobId += 1
         self.lastReleasedTime = release_time
 
-        job = Job(self, resources, self.lastJobId, release_time)
+        job = Job(self, self.lastJobId, release_time)
 
         self.jobs.append(job)
         return job

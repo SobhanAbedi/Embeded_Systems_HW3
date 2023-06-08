@@ -1,7 +1,4 @@
-from job import Job, EMPTY_JOB
-from task import Task, EMPTY_TASK
-
-
+# TODO Accommodate other method of resource management
 class SemaphoreSet(object):
     def __init__(self, resources):
         self.semaphores = {}
@@ -9,11 +6,15 @@ class SemaphoreSet(object):
             self.semaphores[resource] = Semaphore(resource)
 
     def wait(self, resource, job) -> int:
+        if resource == 0:
+            return 0
         if resource in self.semaphores.keys():
             return self.semaphores[resource].wait(job)
         return -1
 
     def signal(self, resource, job) -> int:
+        if resource == 0:
+            return 0
         if resource in self.semaphores.keys():
             return self.semaphores[resource].signal(job)
         return -1
@@ -25,7 +26,7 @@ class Semaphore:
         self.lowest_priority = lowest_priority
         self.priority = lowest_priority
         self.jobs = []
-        self.owner = EMPTY_JOB
+        self.owner = None
         self.taken = False
 
     def elevate_priority(self, priority):
@@ -52,10 +53,11 @@ class Semaphore:
         if self.owner == job:
             if len(self.jobs) > 0:
                 self.owner = self.jobs[0]
-                # TODO:change queue of said job
-            else:
-                self.owner = EMPTY_JOB
-                self.taken = False
+                self.owner.unblock()
+                return 1
+
+            self.owner = None
+            self.taken = False
             return 0
         return -1
 
@@ -65,3 +67,5 @@ class Semaphore:
     def get_priority(self) -> int:
         return self.priority
 
+
+EMPTY_SEM_SET = SemaphoreSet([])
