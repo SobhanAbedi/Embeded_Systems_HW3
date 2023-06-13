@@ -1,3 +1,4 @@
+from __future__ import annotations
 from semaphore import SemaphoreSet, EMPTY_SEM_SET
 from copy import deepcopy
 
@@ -23,15 +24,18 @@ class Job(object):
         self.currSectionIdx = 0
         self.semaphores: SemaphoreSet = EMPTY_SEM_SET
         self.gotLock: bool = False
-        # TODO: Add priority attribute that can be elevated
         self.remaining_execution_time = 0
         self.deadline = release_time
+        self.originalPriority = 0
+        self.priority = 0
         self.sections = []
 
         if task is not None:
             self.task = task
             self.remaining_execution_time = self.task.wcet
             self.deadline = release_time + task.relativeDeadline
+            self.originalPriority = task.relativeDeadline
+            self.priority = self.originalPriority
             self.sections = deepcopy(task.sections)
         else:
             self.task = None
@@ -50,11 +54,21 @@ class Job(object):
         else:
             return 0
 
-    def get_release_time(self) -> int:
+    def get_release_time(self) -> float:
         return self.releaseTime
 
-    def get_deadline(self) -> int:
+    def get_deadline(self) -> float:
         return self.deadline
+
+    def get_priority(self) -> float:
+        return self.priority
+
+    def elevate_priority(self, new_priority: float) -> None:
+        if new_priority > self.priority:
+            self.priority = new_priority
+
+    def revert_priority(self) -> None:
+        self.priority = self.originalPriority
 
     def get_remaining_section_time(self) -> int:
         if self.remaining_execution_time > 0:
@@ -62,7 +76,7 @@ class Job(object):
         else:
             return 0
 
-    def release(self, semaphores: SemaphoreSet, ready_queue, waiting_queue) -> None:
+    def release(self, semaphores: SemaphoreSet, ready_queue: list[Job], waiting_queue: list[Job]) -> None:
         self.semaphores = semaphores
         self.readyQueue: list[Job] = ready_queue
         self.waitingQueue: list[Job] = waiting_queue
@@ -89,7 +103,7 @@ class Job(object):
         self.readyQueue.sort()
         self.gotLock = True
 
-    def execute(self, time) -> tuple[float, int]:
+    def execute(self, time: float) -> tuple[float, int]:
         # print(f'Execute ({time}) job {self.task.id}:{self.id}')
         passed_time = 0
         curr_section = self.sections[self.currSectionIdx]
@@ -137,29 +151,23 @@ class Job(object):
     def short_form(self) -> str:
         return f'Job[{self.task.id}:{self.id}]'
 
-    # TODO: Compare using new priority attribute
-    def __lt__(self, other) -> bool:
-        if self.deadline < other.get_deadline():
+    def __lt__(self, other: Job) -> bool:
+        if self.priority < other.get_priority():
             return True
         return False
 
-    def __le__(self, other) -> bool:
-        if self.deadline <= other.get_deadline():
+    def __le__(self, other: Job) -> bool:
+        if self.priority <= other.get_priority():
             return True
         return False
 
-    def __eq__(self, other) -> bool:
-        if self.deadline == other.get_deadline():
+    def __ge__(self, other: Job) -> bool:
+        if self.priority >= other.get_priority():
             return True
         return False
 
-    def __ge__(self, other) -> bool:
-        if self.deadline >= other.get_deadline():
-            return True
-        return False
-
-    def __gt__(self, other) -> bool:
-        if self.deadline > other.get_deadline():
+    def __gt__(self, other: Job) -> bool:
+        if self.priority > other.get_priority():
             return True
         return False
 

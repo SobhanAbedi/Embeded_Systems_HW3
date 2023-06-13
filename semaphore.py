@@ -36,7 +36,7 @@ class Semaphore:
     def wait(self, job) -> int:
         self.jobs.append(job)
         self.jobs.sort()
-        self.priority = self.jobs[0].get_deadline()
+        self.priority = self.jobs[0].get_priority()
         if self.taken is True:
             return -1
         self.owner = job
@@ -45,18 +45,15 @@ class Semaphore:
 
     def signal(self, job) -> int:
         self.jobs.remove(job)
-        if len(self.jobs) > 0:
-            self.priority = self.jobs[0].get_deadline()
-        else:
-            self.priority = self.lowest_priority
-
         if self.owner == job:
             if len(self.jobs) > 0:
                 self.owner = self.jobs[0]
+                self.priority = self.owner.get_priority()
                 self.owner.unblock()
                 return 1
 
             self.owner = None
+            self.priority = self.lowest_priority
             self.taken = False
             return 0
         return -1

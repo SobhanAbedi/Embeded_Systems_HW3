@@ -39,6 +39,7 @@ def main() -> None:
     event_count = len(event_list)
     for i in range(event_count - 1):
         event_time = event_list[i]
+        # print(f'Current Time: {event_time}')
         next_event_time = event_list[i + 1]
         for event in events[event_time]:
             if event[0] == EventType.RELEASE:
