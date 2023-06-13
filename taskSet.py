@@ -20,7 +20,8 @@ class TaskSetIterator:
         return self.taskSet.tasks[key]
 
 
-def add_job(jobs: list[Job], events: dict[float, list[tuple[EventType, Job]]], job: Job, release_time: float, schedule_end_time: float):
+def add_job(jobs: list[Job], events: dict[float, list[tuple[EventType, Job]]], job: Job, release_time: float,
+            schedule_end_time: float):
     jobs.append(job)
     deadline = job.get_deadline()
     if release_time not in events.keys():
@@ -40,13 +41,13 @@ class TaskSet(object):
         self.event_list: list[float] = []
         self.parse_data_to_tasks(data)
 
-        semaphores = {}
+        task_set_resources = {}
         for task_id in self.tasks.keys():
             resources = self.tasks[task_id].get_all_resources()
             for resource in resources:
-                semaphores[resource] = 1
+                task_set_resources[resource] = 1
 
-        self.resources = list(semaphores.keys())
+        self.resources = list(task_set_resources.keys())
         self.resources.sort()
 
         self.build_job_releases(data)
@@ -105,6 +106,20 @@ class TaskSet(object):
 
     def get_all_resources(self) -> list[int]:
         return self.resources
+
+    def get_highest_priorities(self) -> dict[int, float]:
+        priorities: dict[int, float] = {}
+        for resource in self.resources:
+            priorities[resource] = -1
+
+        for task_id in self.tasks.keys():
+            resources = self.tasks[task_id].get_all_resources()
+            priority = self.tasks[task_id].get_priority()
+            for resource in resources:
+                if priorities[resource] == -1 or priorities[resource] > priority:
+                    priorities[resource] = priority
+
+        return priorities
 
     def get_events(self) -> dict[float, list[tuple[EventType, Job]]]:
         return self.events

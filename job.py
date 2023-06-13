@@ -67,8 +67,11 @@ class Job(object):
         if new_priority > self.priority:
             self.priority = new_priority
 
-    def revert_priority(self) -> None:
-        self.priority = self.originalPriority
+    def revert_priority(self, new_priority: float) -> None:
+        if new_priority >= 0 and new_priority > self.originalPriority:
+            self.priority = new_priority
+        else:
+            self.priority = self.originalPriority
 
     def get_remaining_section_time(self) -> int:
         if self.remaining_execution_time > 0:
@@ -88,6 +91,7 @@ class Job(object):
         if self.state == JobState.READY:
             self.readyQueue.remove(self)
         elif self.state == JobState.BLOCKED:
+            self.semaphores.abandon(self.sections[self.currSectionIdx][0], self)
             self.waitingQueue.remove(self)
         self.readyQueue = []
         self.waitingQueue = []

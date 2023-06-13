@@ -1,22 +1,65 @@
-# TODO Accommodate other method of resource management
+class SemaphoreAP:
+    SIMPLE = 0
+    HLP = 1
+    PIP = 2
+
+
 class SemaphoreSet(object):
-    def __init__(self, resources):
+    def __init__(self, resources: list[int], lowest_priority=1000, access_protocol: SemaphoreAP = SemaphoreAP.SIMPLE,
+                 resources_highest_priority: dict[int, float] = {}):
         self.semaphores = {}
+        self.lowestPriority = lowest_priority
+        self.accessProtocol = access_protocol
+        self.resourcesHighestPriority = resources_highest_priority.copy()
         for resource in resources:
-            self.semaphores[resource] = Semaphore(resource)
+            self.semaphores[resource] = Semaphore(resource, lowest_priority)
+            if self.accessProtocol in [SemaphoreAP.HLP] and \
+                    (resource not in self.resourcesHighestPriority or self.resourcesHighestPriority[resource] == -1):
+                self.resourcesHighestPriority[resource] = self.lowestPriority
 
     def wait(self, resource, job) -> int:
         if resource == 0:
             return 0
         if resource in self.semaphores.keys():
-            return self.semaphores[resource].wait(job)
+            res = self.semaphores[resource].wait(job)
+
+            if self.accessProtocol == SemaphoreAP.HLP:
+                job.elevate_priority(0)
+            elif self.accessProtocol == SemaphoreAP.PIP:
+                if res == -1:
+                    self.semaphores[resource].elevate_priorities()
+
+            return res
         return -1
 
     def signal(self, resource, job) -> int:
         if resource == 0:
             return 0
         if resource in self.semaphores.keys():
-            return self.semaphores[resource].signal(job)
+            res = self.semaphores[resource].signal(job)
+
+            if self.accessProtocol == SemaphoreAP.HLP:
+                job.revert_priority(-1)
+            elif self.accessProtocol == SemaphoreAP.PIP:
+                if res == 0:
+                    self.semaphores[resource].revert_priorities()
+
+            return res
+        return -1
+
+    def abandon(self, resource, job) -> int:
+        if resource == 0:
+            return 0
+        if resource in self.semaphores.keys():
+            res = self.semaphores[resource].abandon(job)
+
+            if self.accessProtocol == SemaphoreAP.HLP:
+                job.revert_priority(-1)
+            elif self.accessProtocol == SemaphoreAP.PIP:
+                if res == 0:
+                    self.semaphores[resource].revert_priorities()
+
+            return res
         return -1
 
 
@@ -29,9 +72,13 @@ class Semaphore:
         self.owner = None
         self.taken = False
 
-    def elevate_priority(self, priority):
-        if priority < self.priority:
-            self.priority = priority
+    def elevate_priorities(self):
+        for job in self.jobs:
+            job.elevate_priority(self.priority)
+
+    def revert_priorities(self):
+        for job in self.jobs:
+            job.revert_priority(self.priority)
 
     def wait(self, job) -> int:
         self.jobs.append(job)
@@ -57,6 +104,15 @@ class Semaphore:
             self.taken = False
             return 0
         return -1
+
+    def abandon(self, job) -> int:
+        if job in self.jobs:
+            if self.owner == job:
+                return self.signal(job)
+            self.jobs.remove(job)
+            return 1
+        else:
+            return -1
 
     def is_taken(self) -> bool:
         return self.is_taken()

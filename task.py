@@ -92,6 +92,9 @@ class Task(object):
 
         return EMPTY_JOB
 
+    def get_priority(self) -> float:
+        return self.relativeDeadline
+
     def get_utilization(self) -> float:
         # TODO
         return 0.0

@@ -10,7 +10,7 @@ from job import Job, EMPTY_JOB
 from task import Task, EMPTY_TASK
 from task import TaskSetJsonKeys as TSJK
 from taskSet import TaskSet, EventType
-from semaphore import SemaphoreSet
+from semaphore import SemaphoreSet, SemaphoreAP
 
 
 def main() -> None:
@@ -33,7 +33,8 @@ def main() -> None:
     events: dict[float, list[tuple[EventType, Job]]] = task_set.get_events()
     ready_queue: list[Job] = []
     waiting_queue: list[Job] = []
-    semaphores = SemaphoreSet(resources)
+    highest_priorities = task_set.get_highest_priorities()
+    semaphores = SemaphoreSet(resources, access_protocol=SemaphoreAP.HLP, resources_highest_priority=highest_priorities)
     schedule: list[tuple[float, float, Job, int]] = []
 
     event_count = len(event_list)
