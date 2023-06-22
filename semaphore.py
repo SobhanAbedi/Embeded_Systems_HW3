@@ -24,7 +24,7 @@ class SemaphoreSet(object):
             res = self.semaphores[resource].wait(job)
 
             if self.accessProtocol == SemaphoreAP.HLP:
-                job.elevate_priority(0)
+                job.elevate_priority(self.resourcesHighestPriority[resource])
             elif self.accessProtocol == SemaphoreAP.PIP:
                 if res == -1:
                     self.semaphores[resource].elevate_priorities()
@@ -41,7 +41,8 @@ class SemaphoreSet(object):
             if self.accessProtocol == SemaphoreAP.HLP:
                 job.revert_priority(-1)
             elif self.accessProtocol == SemaphoreAP.PIP:
-                if res == 0:
+                if res >= 0:
+                    job.revert_priority(-1)
                     self.semaphores[resource].revert_priorities()
 
             return res
@@ -56,7 +57,8 @@ class SemaphoreSet(object):
             if self.accessProtocol == SemaphoreAP.HLP:
                 job.revert_priority(-1)
             elif self.accessProtocol == SemaphoreAP.PIP:
-                if res == 0:
+                if res >= 0:
+                    job.revert_priority(-1)
                     self.semaphores[resource].revert_priorities()
 
             return res
@@ -68,17 +70,22 @@ class Semaphore:
         self.semaphore_id = semaphore_id
         self.lowest_priority = lowest_priority
         self.priority = lowest_priority
+        self.elevated_priority = lowest_priority
         self.jobs = []
         self.owner = None
         self.taken = False
 
     def elevate_priorities(self):
-        for job in self.jobs:
-            job.elevate_priority(self.priority)
+        if self.priority < self.elevated_priority:
+            self.elevated_priority = self.priority
+            for job in self.jobs:
+                job.elevate_priority(self.priority)
 
     def revert_priorities(self):
-        for job in self.jobs:
-            job.revert_priority(self.priority)
+        if self.elevated_priority < self.priority:
+            self.elevated_priority = self.priority
+            for job in self.jobs:
+                job.revert_priority(self.priority)
 
     def wait(self, job) -> int:
         self.jobs.append(job)
@@ -110,6 +117,7 @@ class Semaphore:
             if self.owner == job:
                 return self.signal(job)
             self.jobs.remove(job)
+            self.priority = self.jobs[0].get_priority()
             return 1
         else:
             return -1

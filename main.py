@@ -17,7 +17,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
     else:
-        file_path = "taskset.json"
+        file_path = "taskset1.json"
 
     with open(file_path) as json_data:
         data = json.load(json_data)
@@ -58,8 +58,8 @@ def main() -> None:
             else:
                 selected_job = ready_queue[0]
                 progression, resource = selected_job.execute(next_event_time - curr_time)
-                # if progression == 0:
-                #     print("BLOCKED!")
+                if progression == 0:
+                    print("BLOCKED!")
                 if progression > 0:
                     edited = False
                     if len(schedule) > 0:

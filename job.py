@@ -63,15 +63,27 @@ class Job(object):
     def get_priority(self) -> float:
         return self.priority
 
+    def update_queue(self):
+        if self.state == JobState.READY:
+            self.readyQueue.sort()
+        elif self.state == JobState.BLOCKED:
+            self.waitingQueue.sort()
+
     def elevate_priority(self, new_priority: float) -> None:
-        if new_priority > self.priority:
+        if new_priority < self.priority:
             self.priority = new_priority
+            self.update_queue()
+            # print(f"Priority of {self.short_form()} elevated to {new_priority}")
 
     def revert_priority(self, new_priority: float) -> None:
-        if new_priority >= 0 and new_priority > self.originalPriority:
+        if 0 <= new_priority < self.originalPriority:
             self.priority = new_priority
+            self.update_queue()
+            # print(f"Priority of {self.short_form()} reverted to {new_priority}")
         else:
             self.priority = self.originalPriority
+            self.update_queue()
+            # print(f"Priority of {self.short_form()} reverted to original {self.originalPriority}")
 
     def get_remaining_section_time(self) -> int:
         if self.remaining_execution_time > 0:
@@ -104,6 +116,7 @@ class Job(object):
     def unblock(self) -> None:
         self.waitingQueue.remove(self)
         self.readyQueue.append(self)
+        self.state = JobState.READY
         self.readyQueue.sort()
         self.gotLock = True
 
@@ -130,6 +143,7 @@ class Job(object):
         else:
             self.readyQueue.remove(self)
             self.waitingQueue.append(self)
+            self.state = JobState.BLOCKED
             progression_time = 0
 
         if self.remaining_execution_time == 0:
