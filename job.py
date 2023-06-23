@@ -103,15 +103,15 @@ class Job(object):
         if self.state == JobState.READY:
             self.readyQueue.remove(self)
         elif self.state == JobState.BLOCKED:
-            self.semaphores.abandon(self.sections[self.currSectionIdx][0], self)
             self.waitingQueue.remove(self)
-        self.readyQueue = []
-        self.waitingQueue = []
-        self.semaphores = EMPTY_SEM_SET
         if self.remaining_execution_time > 0:
+            self.semaphores.abandon(self.sections[self.currSectionIdx][0], self)
             self.state = JobState.ABORTED
         else:
             self.state = JobState.ENDED
+        self.readyQueue = []
+        self.waitingQueue = []
+        self.semaphores = EMPTY_SEM_SET
 
     def unblock(self) -> None:
         self.waitingQueue.remove(self)

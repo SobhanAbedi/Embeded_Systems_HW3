@@ -22,7 +22,8 @@ class SemaphoreSet(object):
             return 0
         if resource in self.semaphores.keys():
             res = self.semaphores[resource].wait(job)
-
+            # if res == -1:
+            #     print(f"Resource {resource} is taken by {self.semaphores[resource].owner.short_form()}")
             if self.accessProtocol == SemaphoreAP.HLP:
                 job.elevate_priority(self.resourcesHighestPriority[resource])
             elif self.accessProtocol == SemaphoreAP.PIP:
