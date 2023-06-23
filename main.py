@@ -5,6 +5,8 @@ main.py - parser for task set from JSON file
 
 import json
 import sys
+import plotly.express as px
+import pandas as pd
 
 from job import Job, EMPTY_JOB
 from task import Task, EMPTY_TASK
@@ -34,8 +36,8 @@ def main() -> None:
     ready_queue: list[Job] = []
     waiting_queue: list[Job] = []
     highest_priorities = task_set.get_highest_priorities()
-    semaphores = SemaphoreSet(resources, access_protocol=SemaphoreAP.HLP, resources_highest_priority=highest_priorities)
-    schedule: list[tuple[float, float, Job, int]] = []
+    semaphores = SemaphoreSet(resources, access_protocol=SemaphoreAP.PIP, resources_highest_priority=highest_priorities)
+    schedule = pd.DataFrame([])
 
     event_count = len(event_list)
     for i in range(event_count - 1):
@@ -53,33 +55,48 @@ def main() -> None:
         while curr_time < next_event_time:
             # print(f'Ready Queue Length is {len(ready_queue)} @ t = {curr_time}')
             if len(ready_queue) == 0:
-                schedule.append((curr_time, next_event_time, EMPTY_JOB, 0))
+                # schedule.append((curr_time, next_event_time, EMPTY_JOB, 0))
                 curr_time = next_event_time
             else:
                 selected_job = ready_queue[0]
                 progression, resource = selected_job.execute(next_event_time - curr_time)
-                if progression == 0:
-                    print("BLOCKED!")
+                # if progression == 0:
+                #     print("BLOCKED!")
                 if progression > 0:
                     edited = False
-                    if len(schedule) > 0:
-                        progress = schedule[-1]
-                        if progress[3] == resource and progress[2] == selected_job and progress[1] == curr_time:
-                            schedule[-1] = (progress[0], curr_time + progression, selected_job, resource)
+                    if not schedule.empty:
+                        progress = schedule.loc[schedule.index[-1]]
+                        if (progress.at['Resource'] == str(resource) and progress['Task'] == selected_job.task.id and
+                                progress['Job'] == selected_job.id and progress['End'] == curr_time):
+                            schedule.at[schedule.index[-1], 'End'] = curr_time + progression
                             edited = True
                     if not edited:
-                        schedule.append((curr_time, curr_time + progression, selected_job, resource))
+                        task_id = 0
+                        job_id = 0
+                        if selected_job.task != EMPTY_JOB:
+                            task_id = selected_job.task.id
+                            job_id = selected_job.id
+                        new_row = pd.DataFrame([
+                            dict(Start=curr_time, End=curr_time + progression, Task=task_id, Job=job_id,
+                                 Resource=str(resource))
+                        ])
+                        schedule = pd.concat([schedule, new_row], ignore_index=True)
                 curr_time += progression
 
     print("\nSchedule:")
-    for progress in schedule:
-        if progress[2] != EMPTY_JOB:
-            if progress[3] > 0:
-                print(f'{progress[0]}->{progress[1]}: {progress[2].short_form()} using resource {progress[3]}')
-            else:
-                print(f'{progress[0]}->{progress[1]}: {progress[2].short_form()}')
-        else:
-            print(f'{progress[0]}->{progress[1]}: Free')
+    print(schedule)
+
+    for task in task_set:
+        for resource in resources:
+            range_set_row = pd.DataFrame([
+                dict(Start=0, End=0, Task=task.id, Job=0, Resource=str(resource))
+            ])
+            schedule = pd.concat([schedule, range_set_row], ignore_index=True)
+
+    schedule['Time'] = schedule['End'] - schedule['Start']
+    fig = px.bar(schedule, base="Start", x="Time", y="Task", color="Resource", orientation='h')
+    fig.update_yaxes(autorange="reversed")
+    fig.show()
 
 
 if __name__ == "__main__":
