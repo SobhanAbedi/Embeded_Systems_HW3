@@ -155,10 +155,11 @@ class Job(object):
             self.end()
         return progression_time, resource
 
-    def execute_to_completion(self):
-        # TODO
-        return
-
+    def execute_to_completion(self) -> tuple[float, int]:
+        if self.remaining_execution_time > 0:
+            return self.execute(self.sections[self.currSectionIdx][1])
+        else:
+            return 0, 0
     def is_completed(self) -> bool:
         if self.remaining_execution_time > 0:
             return False

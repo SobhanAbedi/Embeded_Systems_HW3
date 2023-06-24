@@ -96,8 +96,10 @@ class Task(object):
         return self.relativeDeadline
 
     def get_utilization(self) -> float:
-        # TODO
-        return 0.0
+        if self.period == 0:
+            return -1
+        else:
+            return self.wcet / self.period
 
     def __str__(self) -> str:
         return "task {0}: (Φ,T,C,D,∆) = ({1}, {2}, {3}, {4}, {5})".format(self.id, self.offset, self.period, self.wcet,
