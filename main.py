@@ -24,6 +24,7 @@ def main() -> None:
     with open(file_path) as json_data:
         data = json.load(json_data)
 
+    feasible = True
     task_set = TaskSet(data)
     task_set.print_tasks()
     task_set.print_jobs()
@@ -36,7 +37,7 @@ def main() -> None:
     ready_queue: list[Job] = []
     waiting_queue: list[Job] = []
     highest_priorities = task_set.get_highest_priorities()
-    semaphores = SemaphoreSet(resources, access_protocol=SemaphoreAP.PIP, resources_highest_priority=highest_priorities)
+    semaphores = SemaphoreSet(resources, access_protocol=SemaphoreAP.SIMPLE, resources_highest_priority=highest_priorities)
     schedule = pd.DataFrame([])
 
     event_count = len(event_list)
@@ -48,7 +49,8 @@ def main() -> None:
             if event[0] == EventType.RELEASE:
                 event[1].release(semaphores, ready_queue, waiting_queue)
             elif event[0] == EventType.DEADLINE:
-                event[1].end()
+                if event[1].end() == -1:
+                    feasible = False
 
         curr_time = event_time
 
@@ -85,8 +87,16 @@ def main() -> None:
 
     print("\nSchedule:")
     print(schedule)
+    if feasible:
+        print("\nThis Task-set is Feasible")
+    else:
+        print("\nThis Task-set is Not Feasible")
 
     for task in task_set:
+        range_set_row = pd.DataFrame([
+            dict(Start=0, End=0, Task=task.id, Job=0, Resource=str(0))
+        ])
+        schedule = pd.concat([schedule, range_set_row], ignore_index=True)
         for resource in resources:
             range_set_row = pd.DataFrame([
                 dict(Start=0, End=0, Task=task.id, Job=0, Resource=str(resource))

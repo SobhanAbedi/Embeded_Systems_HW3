@@ -99,7 +99,7 @@ class Job(object):
         self.readyQueue.sort()
         self.state = JobState.READY
 
-    def end(self) -> None:
+    def end(self) -> int:
         if self.state == JobState.READY:
             self.readyQueue.remove(self)
         elif self.state == JobState.BLOCKED:
@@ -112,6 +112,9 @@ class Job(object):
         self.readyQueue = []
         self.waitingQueue = []
         self.semaphores = EMPTY_SEM_SET
+        if self.state == JobState.ENDED:
+            return 0
+        return -1
 
     def unblock(self) -> None:
         self.waitingQueue.remove(self)
